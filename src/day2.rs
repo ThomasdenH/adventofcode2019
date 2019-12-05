@@ -55,7 +55,7 @@ pub fn part_2(input: Vec<usize>) -> usize {
             let mut input = input.clone();
             input[1] = i;
             input[2] = j;
-            if run_program(&mut input)[0] == 19690720 {
+            if run_program(&mut input)[0] == 19_690_720 {
                 return 100 * i + j;
             }
         }
