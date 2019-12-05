@@ -12,7 +12,7 @@ pub fn parse_input(s: &str) -> Result<Vec<usize>> {
 }
 
 pub fn run_program(prog: &mut [usize]) -> &[usize] {
-    let mut program_counter = 0usize;
+    let mut program_counter = 0_usize;
     loop {
         if program_counter >= prog.len() {
             return prog;
