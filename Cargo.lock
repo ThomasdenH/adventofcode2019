@@ -4,11 +4,22 @@
 name = "adventofcode"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.25 (registry+https://github.com/rust-lang/crates.io-index)",
+ "aoc-types 0.1.0",
  "auto_enums 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "nom 5.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.9 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "anyhow"
+version = "1.0.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "aoc-types"
+version = "0.1.0"
 
 [[package]]
 name = "arrayvec"
@@ -200,6 +211,7 @@ version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [metadata]
+"checksum anyhow 1.0.25 (registry+https://github.com/rust-lang/crates.io-index)" = "9267dff192e68f3399525901e709a48c1d3982c9c072fa32f2127a0cb0babf14"
 "checksum arrayvec 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)" = "cd9fd44efafa8690358b7408d253adf110036b88f55672a933f01d616ad9b1b9"
 "checksum auto_enums 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4d86491c78ee14681838b5ea2d6493c79710368656bf2e58d41630874fa49a91"
 "checksum auto_enums_core 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)" = "01d9da2929a489e7b5567c4b5dc1337d3ba4416d5082235ad3bb307c2532a436"
