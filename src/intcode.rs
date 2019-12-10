@@ -1,15 +1,21 @@
+use async_trait::async_trait;
 use std::convert::TryFrom;
 use std::iter;
 use thiserror::*;
 
 pub type Value = isize;
 
+#[async_trait]
 pub trait Read {
-    fn read(&mut self) -> Option<Value>;
+    async fn read(&mut self) -> Option<Value>;
 }
 
-impl<I: Iterator<Item = Value>> Read for I {
-    fn read(&mut self) -> Option<Value> {
+#[async_trait]
+impl<I> Read for I
+where
+    I: Iterator<Item = Value> + std::marker::Send,
+{
+    async fn read(&mut self) -> Option<Value> {
         self.next()
     }
 }
@@ -169,7 +175,7 @@ impl Computer {
         val
     }
 
-    pub fn run(
+    pub async fn run(
         &mut self,
         input: &mut dyn Read,
         mut output: Option<&mut dyn Write>,
@@ -202,7 +208,7 @@ impl Computer {
                     *to = a * b;
                 }
                 OpCode::Input => {
-                    let value = input.read().ok_or(ComputerError::ReadInputError)?;
+                    let value = input.read().await.ok_or(ComputerError::ReadInputError)?;
                     let to_at = parameters.next()?;
                     let to = self.get_parameter_mut(to_at)?;
                     *to = value;
