@@ -2,11 +2,43 @@ use async_trait::async_trait;
 use futures::channel::mpsc::{Receiver, Sender};
 use futures::prelude::*;
 use futures_await_test::async_test;
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::iter;
 use thiserror::*;
 
 pub type Value = isize;
+
+pub struct Memory {
+    base: Vec<Value>,
+    additional: HashMap<usize, Value>,
+}
+
+impl From<Vec<Value>> for Memory {
+    fn from(base: Vec<Value>) -> Self {
+        Memory {
+            base,
+            additional: HashMap::new(),
+        }
+    }
+}
+
+impl Memory {
+    fn get(&self, pos: usize) -> Value {
+        *self
+            .base
+            .get(pos)
+            .unwrap_or_else(|| self.additional.get(&pos).unwrap_or(&0))
+    }
+
+    fn get_mut(&mut self, pos: usize) -> &mut Value {
+        if let Some(val) = self.base.get_mut(pos) {
+            val
+        } else {
+            self.additional.entry(pos).or_insert(0)
+        }
+    }
+}
 
 #[async_trait]
 pub trait Read {
@@ -106,6 +138,7 @@ enum OpCode {
     JumpIfFalse,
     LessThan,
     Equals,
+    RelativeBaseOffset,
     Quit,
 }
 
@@ -113,6 +146,7 @@ enum OpCode {
 enum ParameterMode {
     Position,
     Immediate,
+    Relative,
 }
 
 #[derive(Error, Debug, Clone, Copy)]
@@ -145,6 +179,7 @@ impl TryFrom<Value> for OpCode {
             6 => Ok(OpCode::JumpIfFalse),
             7 => Ok(OpCode::LessThan),
             8 => Ok(OpCode::Equals),
+            9 => Ok(OpCode::RelativeBaseOffset),
             99 => Ok(OpCode::Quit),
             other => Err(ComputerError::UnknownOpCode(other)),
         }
@@ -157,6 +192,7 @@ impl TryFrom<Value> for ParameterMode {
         match u {
             0 => Ok(ParameterMode::Position),
             1 => Ok(ParameterMode::Immediate),
+            2 => Ok(ParameterMode::Relative),
             other => Err(ComputerError::UnknownParameterMode(other)),
         }
     }
@@ -188,20 +224,22 @@ impl Instruction {
 }
 
 pub struct Computer {
-    memory: Vec<Value>,
+    memory: Memory,
     instruction_pointer: Value,
+    relative_base: Value,
 }
 
 impl Computer {
     pub fn load(memory: Vec<Value>) -> Computer {
         Computer {
-            memory,
+            memory: Memory::from(memory),
             instruction_pointer: 0,
+            relative_base: 0,
         }
     }
 
-    fn advance_pointer(&mut self) -> Option<Value> {
-        let val = self.memory.get(self.instruction_pointer as usize).copied();
+    fn advance_pointer(&mut self) -> Value {
+        let val = self.memory.get(self.instruction_pointer as usize);
         self.instruction_pointer += 1;
         val
     }
@@ -211,11 +249,12 @@ impl Computer {
         input: &mut dyn Read,
         mut output: Option<&mut dyn Write>,
     ) -> Result<(), ComputerError> {
-        while let Some(instruction_value) = self.advance_pointer() {
+        loop {
+            let instruction_value = self.advance_pointer();
             let instruction = Instruction(instruction_value);
             let mut parameters = instruction
                 .modes()
-                .zip(iter::from_fn(|| self.advance_pointer()))
+                .zip(iter::from_fn(|| Some(self.advance_pointer())))
                 .map(|(a, b)| Ok((a?, b)))
                 .ok_or_repeat(ComputerError::ExpectedParameter);
             match instruction.op_code()? {
@@ -287,9 +326,13 @@ impl Computer {
                     let c = self.get_parameter_mut(c_at)?;
                     *c = if a == b { 1 } else { 0 };
                 }
+                OpCode::RelativeBaseOffset => {
+                    let at = parameters.next()?;
+                    let a = self.get_parameter(at)?;
+                    self.relative_base += a;
+                }
             }
         }
-        Ok(())
     }
 
     fn get_parameter(&self, (mode, pos): (ParameterMode, Value)) -> Result<Value, ComputerError> {
@@ -297,10 +340,12 @@ impl Computer {
             ParameterMode::Immediate => Ok(pos),
             ParameterMode::Position => {
                 let pos = usize::try_from(pos).map_err(|_| ComputerError::ReadOutsideOfMemory)?;
-                self.memory
-                    .get(pos)
-                    .copied()
-                    .ok_or(ComputerError::ReadOutsideOfMemory)
+                Ok(self.memory.get(pos))
+            }
+            ParameterMode::Relative => {
+                let pos = usize::try_from(self.relative_base + pos)
+                    .map_err(|_| ComputerError::ReadOutsideOfMemory)?;
+                Ok(self.memory.get(pos))
             }
         }
     }
@@ -313,14 +358,17 @@ impl Computer {
             ParameterMode::Immediate => Err(ComputerError::WriteInImmediateMode),
             ParameterMode::Position => {
                 let pos = usize::try_from(pos).map_err(|_| ComputerError::ReadOutsideOfMemory)?;
-                self.memory
-                    .get_mut(pos)
-                    .ok_or(ComputerError::ReadOutsideOfMemory)
+                Ok(self.memory.get_mut(pos))
+            }
+            ParameterMode::Relative => {
+                let pos = usize::try_from(self.relative_base + pos)
+                    .map_err(|_| ComputerError::ReadOutsideOfMemory)?;
+                Ok(self.memory.get_mut(pos))
             }
         }
     }
 
-    pub fn memory(&self) -> &[Value] {
-        &self.memory
+    pub fn base_memory(&self) -> &[Value] {
+        &self.memory.base
     }
 }

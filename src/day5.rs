@@ -33,20 +33,20 @@ async fn test_day_2_examples() {
     let program = "1,0,0,0,99";
     let mut comp = Computer::load(parse_input(program));
     comp.run(&mut no_input, None).await.unwrap();
-    assert_eq!(comp.memory(), &[2, 0, 0, 0, 99]);
+    assert_eq!(comp.base_memory(), &[2, 0, 0, 0, 99]);
 
     let program = "2,3,0,3,99";
     let mut comp = Computer::load(parse_input(program));
     comp.run(&mut no_input, None).await.unwrap();
-    assert_eq!(comp.memory(), &[2, 3, 0, 6, 99]);
+    assert_eq!(comp.base_memory(), &[2, 3, 0, 6, 99]);
 
     let program = "2,4,4,5,99,0";
     let mut comp = Computer::load(parse_input(program));
     comp.run(&mut no_input, None).await.unwrap();
-    assert_eq!(comp.memory(), &[2, 4, 4, 5, 99, 9801]);
+    assert_eq!(comp.base_memory(), &[2, 4, 4, 5, 99, 9801]);
 
     let program = "1,1,1,4,99,5,6,0,99";
     let mut comp = Computer::load(parse_input(program));
     comp.run(&mut no_input, None).await.unwrap();
-    assert_eq!(comp.memory(), &[30, 1, 1, 4, 2, 5, 6, 0, 99]);
+    assert_eq!(comp.base_memory(), &[30, 1, 1, 4, 2, 5, 6, 0, 99]);
 }
