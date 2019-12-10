@@ -13,12 +13,12 @@ pub enum SolutionError {
 
 pub struct Solution {}
 
-async fn output(memory: Vec<Value>, input: &[Value]) -> Result<Value, ComputerError> {
-    let mut output_a: &mut Value = &mut 0;
+async fn output(memory: Vec<Value>, mut input: &[Value]) -> Result<Value, ComputerError> {
+    let mut output_a = &mut None;
     Computer::load(memory)
-        .run(&mut input.iter().copied(), Some(&mut output_a))
+        .run(&mut input, Some(&mut output_a))
         .await?;
-    Ok(*output_a)
+    Ok(output_a.unwrap())
 }
 
 /// Parse the input to a common format between both parts.

@@ -1,6 +1,5 @@
 use adventofcode::day_7::{parse_input, part_1};
 use anyhow::Result;
-use aoc_types::DaySolution;
 use futures_await_test::async_test;
 
 #[async_test]
