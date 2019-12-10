@@ -68,27 +68,21 @@ pub async fn part_2(parsed_input: &[Value]) -> Result<Value, SolutionError> {
         let first = senders.remove(0);
         senders.push(first);
 
-        dbg!("senders and receivers ready");
-
         let mut receivers = futures::future::try_join_all(perm.iter().zip(senders.into_iter()).zip(receivers.into_iter()).enumerate().map(
             async move |(i, ((phase_setting, mut sender), mut receiver))| -> Result<Receiver<Value>, SolutionError> {
-                dbg!("start");
                 // Send the phase signal to the next amplifier, because order doesn't matter
                 sender.send(*phase_setting).await?;
                 if i == LAST_AMPLIFIER {
                     // Send the 0 signal to the first amplifier, via the sender of the last one
                     sender.send(0).await?;
                 }
-                dbg!("sent signals");
                 Computer::load(parsed_input.to_vec())
                     .run(&mut receiver, Some(&mut sender)).await?;
-                dbg!("done running");
                 sender.close().await?;
                 Ok(receiver)
             },
         ))
         .await?;
-        dbg!("gotten receivers");
         let output = receivers.remove(0).next().await.unwrap();
         max = Some(max.map(|m| m.max(output)).unwrap_or(output));
     }

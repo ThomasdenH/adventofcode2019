@@ -20,6 +20,6 @@ async fn test_part_2() -> Result<()> {
     let mut s = String::new();
     let mut file = File::open("input/day7")?;
     file.read_to_string(&mut s)?;
-    assert_eq!(part_2(&parse_input(&s)?).await?, 38500);
+    assert_eq!(part_2(&parse_input(&s)?).await?, 33660560);
     Ok(())
 }
