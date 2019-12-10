@@ -239,7 +239,7 @@ impl Computer {
                     *to = a * b;
                 }
                 OpCode::Input => {
-                    let value = input.read().await.ok_or(ComputerError::ReadInputError)?;
+                    let value = dbg!(input.read().await.ok_or(ComputerError::ReadInputError)?);
                     let to_at = parameters.next()?;
                     let to = self.get_parameter_mut(to_at)?;
                     *to = value;
@@ -248,7 +248,7 @@ impl Computer {
                     let from_at = parameters.next()?;
                     let from = self.get_parameter(from_at)?;
                     if let Some(ref mut output) = output {
-                        output.write(from).await;
+                        output.write(dbg!(from)).await;
                     }
                 }
                 OpCode::JumpIfTrue => {

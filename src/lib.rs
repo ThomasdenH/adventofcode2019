@@ -1,4 +1,5 @@
 #![feature(proc_macro_hygiene, stmt_expr_attributes)]
+#![feature(async_closure)]
 
 pub mod day1;
 pub mod day2;
