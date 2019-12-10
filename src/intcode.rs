@@ -24,6 +24,12 @@ impl Write for Vec<Value> {
     }
 }
 
+impl<'a> Write for &'a mut Value {
+    fn write(&mut self, output: Value) {
+        **self = output;
+    }
+}
+
 /// Unwraps items from an iterator automatically or returns E.
 struct IteratorOkOrRepeat<Item, I: Iterator<Item = Result<Item, E>>, E: Clone> {
     iterator: I,

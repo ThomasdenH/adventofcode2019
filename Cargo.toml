@@ -12,6 +12,7 @@ nom = "5"
 itertools = "0.8.2"
 thiserror = "1"
 aoc-types = { path = "../aoc-types" }
+permutohedron = "0.2.4"
 
 [dev-dependencies]
 anyhow = "1"
