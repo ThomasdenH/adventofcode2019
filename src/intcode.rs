@@ -46,7 +46,7 @@ pub trait Read {
 }
 
 #[async_trait]
-impl<'a> Read for &'a [Value] {
+impl Read for &'_ [Value] {
     async fn read(&mut self) -> Option<Value> {
         if let Some((value, remainder)) = self.split_first() {
             *self = remainder;
@@ -86,7 +86,7 @@ impl Write for Vec<Value> {
 }
 
 #[async_trait]
-impl<'a> Write for &'a mut Option<Value> {
+impl Write for &'_ mut Option<Value> {
     async fn write(&mut self, output: Value) {
         **self = Some(output);
     }
