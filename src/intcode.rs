@@ -9,6 +9,13 @@ use thiserror::*;
 
 pub type Value = isize;
 
+pub fn parse_program(s: &str) -> Vec<Value> {
+    s.trim()
+        .split(',')
+        .map(|s| s.parse::<Value>().unwrap())
+        .collect()
+}
+
 pub struct Memory {
     base: Vec<Value>,
     additional: HashMap<usize, Value>,
