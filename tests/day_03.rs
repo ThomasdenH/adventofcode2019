@@ -1,4 +1,4 @@
-use adventofcode::day3::*;
+use adventofcode::day_03::*;
 use adventofcode::Result;
 use std::fs::File;
 use std::io::Read;

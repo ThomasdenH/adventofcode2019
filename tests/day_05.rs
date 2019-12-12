@@ -1,4 +1,4 @@
-use adventofcode::day5::*;
+use adventofcode::day_05::*;
 use adventofcode::Result;
 use futures_await_test::async_test;
 use std::fs::File;

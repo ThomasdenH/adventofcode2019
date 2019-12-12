@@ -1,4 +1,4 @@
-use adventofcode::day_6::Solution;
+use adventofcode::day_06::Solution;
 use anyhow::Result;
 use aoc_types::DaySolution;
 

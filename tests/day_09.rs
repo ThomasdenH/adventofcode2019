@@ -1,4 +1,4 @@
-use adventofcode::day_9::{parse_input, part_1, part_2};
+use adventofcode::day_09::{parse_input, part_1, part_2};
 use anyhow::Result;
 use futures_await_test::async_test;
 

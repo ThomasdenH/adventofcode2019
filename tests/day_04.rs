@@ -1,4 +1,4 @@
-use adventofcode::day4::*;
+use adventofcode::day_04::*;
 
 #[test]
 fn test_part_1() {
