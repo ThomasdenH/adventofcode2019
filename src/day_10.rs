@@ -52,10 +52,21 @@ impl Ord for Rational {
     }
 }
 
+/// This type uniquely defines angles. Multiples of the same vector yield the same angle.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
-struct Angle {
+struct AngleHash {
     x: i64,
     y: i64,
+}
+
+impl From<(i64, i64)> for AngleHash {
+    fn from((x, y): (i64, i64)) -> Self {
+        let gcd = gcd(x, y);
+        AngleHash {
+            x: x / gcd,
+            y: y / gcd,
+        }
+    }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
@@ -76,6 +87,10 @@ impl Point {
             x: other.x as i64 - self.x as i64,
             y: other.y as i64 - self.y as i64,
         }
+    }
+
+    fn new(x: usize, y: usize) -> Point {
+        Point { x, y }
     }
 }
 
@@ -103,8 +118,8 @@ impl Vector {
         self.x * self.x + self.y * self.y
     }
 
-    fn angle(&self) -> Angle {
-        Angle::from((self.x, self.y))
+    fn angle_hash(&self) -> AngleHash {
+        AngleHash::from((self.x, self.y))
     }
 }
 
@@ -127,16 +142,6 @@ fn gcd(a: i64, b: i64) -> i64 {
 fn test_gcd() {
     assert_eq!(gcd(0, 4), 4);
     assert_eq!(gcd(2, 6), 2);
-}
-
-impl From<(i64, i64)> for Angle {
-    fn from((x, y): (i64, i64)) -> Self {
-        let gcd = gcd(x, y);
-        Angle {
-            x: x / gcd,
-            y: y / gcd,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
@@ -224,7 +229,7 @@ fn best_location(field: &AstroidField) -> (Point, usize) {
                 field
                     .astroids()
                     .filter(|&p2| p1 != p2)
-                    .map(|p2| p1.vector_to(p2).angle())
+                    .map(|p2| p1.vector_to(p2).angle_hash())
                     .collect::<HashSet<_>>()
                     .len(),
             )
@@ -264,19 +269,91 @@ pub fn part_2(field: &AstroidField) -> usize {
 }
 
 #[test]
-fn test_part_1() {
+fn test_part_1() -> anyhow::Result<()> {
     assert_eq!(
-        part_1(
-            &parse_input(
-                ".#..#
+        best_location(&parse_input(
+            ".#..#
 .....
 #####
 ....#
 ...##
 "
-            )
-            .unwrap()
-        ),
-        8
+        )?),
+        (Point::new(3, 4), 8)
     );
+    assert_eq!(
+        best_location(&parse_input(
+            "......#.#.
+#..#.#....
+..#######.
+.#.#.###..
+.#..#.....
+..#....#.#
+#..#....#.
+.##.#..###
+##...#..#.
+.#....####
+"
+        )?),
+        (Point::new(5, 8), 33)
+    );
+    assert_eq!(
+        best_location(&parse_input(
+            "#.#...#.#.
+.###....#.
+.#....#...
+##.#.#.#.#
+....#.#.#.
+.##..###.#
+..#...##..
+..##....##
+......#...
+.####.###.            
+"
+        )?),
+        (Point::new(1, 2), 35)
+    );
+    assert_eq!(
+        best_location(&parse_input(
+            ".#..#..###
+####.###.#
+....###.#.
+..###.##.#
+##.##.#.#.
+....###..#
+..#.#..#.#
+#..#.#.###
+.##...##.#
+.....#.#..                  
+"
+        )?),
+        (Point::new(6, 3), 41)
+    );
+    assert_eq!(
+        best_location(&parse_input(
+            ".#..##.###...#######
+##.############..##.
+.#.######.########.#
+.###.#######.####.#.
+#####.##.#.##.###.##
+..#####..#.#########
+####################
+#.####....###.#.#.##
+##.#################
+#####.##.###..####..
+..######..##.#######
+####.##.####...##..#
+.#####..#.######.###
+##...#.##########...
+#.##########.#######
+.####.#.###.###.#.##
+....##.##.###..#####
+.#.#.###########.###
+#.#.#.#####.####.###
+###.##.####.##.#..##                            
+"
+        )?),
+        (Point::new(11, 13), 210)
+    );
+    Ok(())
 }
