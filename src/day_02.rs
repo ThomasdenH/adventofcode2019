@@ -1,9 +1,5 @@
 use crate::intcode::{Computer, ComputerError, parse_program, Memory, Value};
 
-const OP_QUIT: usize = 99;
-const OP_ADD: usize = 1;
-const OP_MUL: usize = 2;
-
 pub fn parse_input(s: &str) -> Result<Memory, ComputerError> {
     parse_program(s)
 }
