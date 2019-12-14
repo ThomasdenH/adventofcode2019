@@ -10,10 +10,6 @@ struct Rational {
 }
 
 impl Rational {
-    fn is_negative(&self) -> bool {
-        self.p < 0
-    }
-
     fn new(p: i64, q: i64) -> Self {
         if q < 0 {
             Self::new(-p, -q)
@@ -89,6 +85,7 @@ impl Point {
         }
     }
 
+    #[cfg(test)]
     fn new(x: usize, y: usize) -> Point {
         Point { x, y }
     }
@@ -157,19 +154,6 @@ pub struct AstroidField {
 }
 
 impl AstroidField {
-    fn new(width: usize, height: usize) -> AstroidField {
-        AstroidField {
-            width,
-            tiles: (0..width * height)
-                .map(|_| AstroidFieldTile::Empty)
-                .collect(),
-        }
-    }
-
-    fn set(&mut self, p: Point, val: AstroidFieldTile) {
-        self.tiles[p.x + p.y * self.width] = val;
-    }
-
     fn get(&self, p: Point) -> AstroidFieldTile {
         self.tiles[p.x + p.y * self.width]
     }

@@ -247,7 +247,7 @@ pub fn one_dimensional_loop(mut moons: [(i64, i64); 4]) -> usize {
 
 #[test]
 fn test_example_one() {
-    let mut moons = vec![
+    let moons = vec![
         Moon::from_pos(Vector { x: -1, y: 0, z: 2 }),
         Moon::from_pos(Vector {
             x: 2,

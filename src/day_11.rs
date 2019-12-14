@@ -86,8 +86,8 @@ struct EmergencyHullPaintingRobot {}
 
 impl EmergencyHullPaintingRobot {
     async fn run(memory: Memory, field: &mut Field) -> Result<(), SolutionError> {
-        let (mut to_robot_sender, mut to_robot_receiver) = channel(CHANNEL_BUFFER_SIZE);
-        let (mut from_robot_sender, mut from_robot_receiver) = channel(CHANNEL_BUFFER_SIZE);
+        let (to_robot_sender, mut to_robot_receiver) = channel(CHANNEL_BUFFER_SIZE);
+        let (mut from_robot_sender, from_robot_receiver) = channel(CHANNEL_BUFFER_SIZE);
         let mut computer = Computer::load(memory);
         computer.set_input(Some(&mut to_robot_receiver));
         computer.set_output(Some(&mut from_robot_sender));
