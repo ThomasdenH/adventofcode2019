@@ -1,20 +1,21 @@
 use adventofcode::day_02::*;
-use adventofcode::Result;
+use anyhow::Result;
 use std::fs::File;
 use std::io::Read;
+use futures_await_test::*;
 
-#[test]
-fn test_part_1() -> Result<()> {
+#[async_test]
+async fn test_part_1() -> Result<()> {
     let mut s = String::new();
     File::open("./input/day2")?.read_to_string(&mut s)?;
-    assert_eq!(part_1(&mut parse_input(&s)?), 4330636);
+    assert_eq!(part_1(parse_input(&s)?).await?, 4330636);
     Ok(())
 }
 
-#[test]
-fn test_part_2() -> Result<()> {
+#[async_test]
+async fn test_part_2() -> Result<()> {
     let mut s = String::new();
     File::open("./input/day2")?.read_to_string(&mut s)?;
-    assert_eq!(part_2(parse_input(&s)?), 6086);
+    assert_eq!(part_2(parse_input(&s)?).await?, 6086);
     Ok(())
 }

@@ -1,5 +1,5 @@
 use adventofcode::day_03::*;
-use adventofcode::Result;
+use anyhow::Result;
 use std::fs::File;
 use std::io::Read;
 

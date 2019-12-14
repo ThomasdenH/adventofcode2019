@@ -1,6 +1,5 @@
-use crate::intcode::{parse_program, Computer, ComputerError, Value};
-use futures::channel::mpsc::{channel, Receiver, Sender};
-use futures::prelude::*;
+use crate::intcode::{Computer, ComputerError, Value};
+use futures::channel::mpsc::{Receiver, Sender};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use thiserror::*;
@@ -54,8 +53,8 @@ impl Direction {
     }
 }
 
-struct EmergencyHullPaintingRobot {
-    computer: Computer,
+struct EmergencyHullPaintingRobot<'a> {
+    computer: Computer<'a>
 }
 
 const CHANNEL_BUFFER_SIZE: usize = 2;
@@ -134,8 +133,4 @@ impl Field {
     fn unique_tiles_painted(&self) -> usize {
         self.colors.len()
     }
-}
-
-pub fn parse_input(input: &str) -> Vec<Value> {
-    parse_program(input)
 }

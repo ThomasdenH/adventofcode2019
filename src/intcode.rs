@@ -1,21 +1,21 @@
-use async_trait::async_trait;
-use futures::channel::mpsc::{Receiver, Sender};
-use futures::prelude::*;
-use futures_await_test::async_test;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::iter;
 use thiserror::*;
 
+pub mod io;
+pub use io::*;
+
 pub type Value = isize;
 
-pub fn parse_program(s: &str) -> Vec<Value> {
-    s.trim()
+pub fn parse_program(s: &str) -> Result<Memory, ComputerError> {
+    Ok(Memory::from(s.trim()
         .split(',')
-        .map(|s| s.parse::<Value>().unwrap())
-        .collect()
+        .map(|s| s.parse::<Value>().map_err(|_| ComputerError::ParseProgramError))
+        .collect::<Result<Vec<_>, ComputerError>>()?))
 }
 
+#[derive(Clone, Debug)]
 pub struct Memory {
     base: Vec<Value>,
     additional: HashMap<usize, Value>,
@@ -31,78 +31,19 @@ impl From<Vec<Value>> for Memory {
 }
 
 impl Memory {
-    fn get(&self, pos: usize) -> Value {
+    pub fn get(&self, pos: usize) -> Value {
         *self
             .base
             .get(pos)
             .unwrap_or_else(|| self.additional.get(&pos).unwrap_or(&0))
     }
 
-    fn get_mut(&mut self, pos: usize) -> &mut Value {
+    pub fn get_mut(&mut self, pos: usize) -> &mut Value {
         if let Some(val) = self.base.get_mut(pos) {
             val
         } else {
             self.additional.entry(pos).or_insert(0)
         }
-    }
-}
-
-#[async_trait]
-pub trait Read {
-    async fn read(&mut self) -> Option<Value>;
-}
-
-#[async_trait]
-impl Read for &'_ [Value] {
-    async fn read(&mut self) -> Option<Value> {
-        if let Some((value, remainder)) = self.split_first() {
-            *self = remainder;
-            Some(*value)
-        } else {
-            None
-        }
-    }
-}
-
-#[async_test]
-async fn test_slice_input() {
-    let mut input: &[Value] = &[0, 1, 2];
-    assert_eq!(input.read().await, Some(0));
-    assert_eq!(input.read().await, Some(1));
-    assert_eq!(input.read().await, Some(2));
-    assert_eq!(input.read().await, None);
-}
-
-#[async_trait]
-impl Read for Receiver<Value> {
-    async fn read(&mut self) -> Option<Value> {
-        self.next().await
-    }
-}
-
-#[async_trait]
-pub trait Write {
-    async fn write(&mut self, output: Value);
-}
-
-#[async_trait]
-impl Write for Vec<Value> {
-    async fn write(&mut self, output: Value) {
-        self.push(output)
-    }
-}
-
-#[async_trait]
-impl Write for &'_ mut Option<Value> {
-    async fn write(&mut self, output: Value) {
-        **self = Some(output);
-    }
-}
-
-#[async_trait]
-impl Write for Sender<Value> {
-    async fn write(&mut self, output: Value) {
-        self.send(output).await.unwrap();
     }
 }
 
@@ -172,6 +113,12 @@ pub enum ComputerError {
     WriteOutsideOfMemory,
     #[error("attempted to read outside of memory")]
     ReadOutsideOfMemory,
+    #[error("an arithmatic error occurred")]
+    ArithmaticError,
+    #[error("could not parse the program")]
+    ParseProgramError,
+    #[error("jumped to invalid location")]
+    InvalidJump
 }
 
 impl TryFrom<Value> for OpCode {
@@ -230,18 +177,22 @@ impl Instruction {
     }
 }
 
-pub struct Computer {
+pub struct Computer<'a> {
     memory: Memory,
-    instruction_pointer: Value,
+    instruction_pointer: usize,
     relative_base: Value,
+    read: Option<&'a mut (dyn Read + 'a)>,
+    write: Option<&'a mut (dyn Write + 'a)>
 }
 
-impl Computer {
-    pub fn load(memory: Vec<Value>) -> Computer {
+impl<'a> Computer<'a> {
+    pub fn load(memory: Memory) -> Self {
         Computer {
-            memory: Memory::from(memory),
+            memory,
             instruction_pointer: 0,
             relative_base: 0,
+            read: None,
+            write: None
         }
     }
 
@@ -251,11 +202,19 @@ impl Computer {
         val
     }
 
-    pub async fn run(
-        &mut self,
-        input: &mut dyn Read,
-        mut output: Option<&mut dyn Write>,
-    ) -> Result<(), ComputerError> {
+    pub fn memory(&self) -> &Memory {
+        &self.memory
+    }
+
+    pub fn set_input(&mut self, read: Option<&'a mut (dyn Read + 'a)>) {
+        self.read = read;
+    }
+
+    pub fn set_output(&mut self, write: Option<&'a mut (dyn Write + 'a)>) {
+        self.write = write;
+    }
+
+    pub async fn run(&mut self) -> Result<(), ComputerError> {
         loop {
             let instruction_value = self.advance_pointer();
             let instruction = Instruction(instruction_value);
@@ -273,7 +232,7 @@ impl Computer {
                     let a = self.get_parameter(a_at)?;
                     let b = self.get_parameter(b_at)?;
                     let to = self.get_parameter_mut(to_at)?;
-                    *to = a + b;
+                    *to = a.checked_add(b).ok_or(ComputerError::ArithmaticError)?;
                 }
                 OpCode::Multiply => {
                     let a_at = parameters.next()?;
@@ -282,18 +241,22 @@ impl Computer {
                     let a = self.get_parameter(a_at)?;
                     let b = self.get_parameter(b_at)?;
                     let to = self.get_parameter_mut(to_at)?;
-                    *to = a * b;
+                    *to = a.checked_mul(b).ok_or(ComputerError::ArithmaticError)?;
                 }
                 OpCode::Input => {
-                    let value = input.read().await.ok_or(ComputerError::ReadInputError)?;
                     let to_at = parameters.next()?;
+                    let value = self.read.as_mut()
+                        .ok_or(ComputerError::ReadInputError)?
+                        .read()
+                        .await
+                        .ok_or(ComputerError::ReadInputError)?;
                     let to = self.get_parameter_mut(to_at)?;
                     *to = value;
                 }
                 OpCode::Output => {
                     let from_at = parameters.next()?;
                     let from = self.get_parameter(from_at)?;
-                    if let Some(ref mut output) = output {
+                    if let Some(ref mut output) = self.write {
                         output.write(from).await;
                     }
                 }
@@ -303,7 +266,7 @@ impl Computer {
                     let a = self.get_parameter(a_at)?;
                     let b = self.get_parameter(b_at)?;
                     if a != 0 {
-                        self.instruction_pointer = b;
+                        self.instruction_pointer = usize::try_from(b).map_err(|_| ComputerError::InvalidJump)?;
                     }
                 }
                 OpCode::JumpIfFalse => {
@@ -312,7 +275,7 @@ impl Computer {
                     let a = self.get_parameter(a_at)?;
                     let b = self.get_parameter(b_at)?;
                     if a == 0 {
-                        self.instruction_pointer = b;
+                        self.instruction_pointer = usize::try_from(b).map_err(|_| ComputerError::InvalidJump)?;
                     }
                 }
                 OpCode::LessThan => {

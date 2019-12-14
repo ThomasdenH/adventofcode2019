@@ -1,4 +1,4 @@
-use crate::Result;
+use anyhow::Result;
 
 pub fn parse_input(s: &str) -> Result<Vec<u32>> {
     s.lines()

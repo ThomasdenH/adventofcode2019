@@ -1,4 +1,4 @@
-use crate::intcode::{Computer, ComputerError, Value};
+use crate::intcode::{Computer, ComputerError, Value, Memory, parse_program};
 use futures::channel::mpsc::{channel, Receiver, SendError, Sender};
 use futures::prelude::*;
 use permutohedron::Heap;
@@ -17,30 +17,28 @@ pub enum SolutionError {
 
 pub struct Solution {}
 
-async fn output(memory: Vec<Value>, mut input: &[Value]) -> Result<Value, ComputerError> {
-    let mut output_a = &mut None;
-    Computer::load(memory)
-        .run(&mut input, Some(&mut output_a))
+async fn output(memory: Memory, mut input: &[Value]) -> Result<Value, ComputerError> {
+    let mut output_a = None;
+    let mut comp = Computer::load(memory);
+    comp.set_input(Some(&mut input));
+    comp.set_output(Some(&mut output_a));
+        comp.run()
         .await?;
     Ok(output_a.unwrap())
 }
 
 /// Parse the input to a common format between both parts.
-pub fn parse_input(input: &str) -> Result<Vec<Value>, SolutionError> {
-    input
-        .trim()
-        .split(',')
-        .map(|s| s.parse::<Value>().map_err(SolutionError::from))
-        .collect()
+pub fn parse_input(input: &str) -> Result<Memory, SolutionError> {
+    parse_program(input).map_err(|e| e.into())
 }
 
 /// Solve the first part for the parsed input.
-pub async fn part_1(parsed_input: &[Value]) -> Result<Value, SolutionError> {
+pub async fn part_1(parsed_input: Memory) -> Result<Value, SolutionError> {
     let mut max = None;
     for perm in Heap::new(&mut [0, 1, 2, 3, 4]) {
         let mut previous = 0;
         for phase_setting in &perm {
-            previous = output(parsed_input.to_vec(), &[*phase_setting, previous]).await?;
+            previous = output(parsed_input.clone(), &[*phase_setting, previous]).await?;
         }
         max = Some(max.map(|m: Value| m.max(previous)).unwrap_or(previous));
     }
@@ -51,7 +49,7 @@ const BUFFER_SIZE: usize = 1;
 const LAST_AMPLIFIER: usize = 4;
 
 /// Solve the second part for the parsed input.
-pub async fn part_2(parsed_input: &[Value]) -> Result<Value, SolutionError> {
+pub async fn part_2(parsed_input: &Memory) -> Result<Value, SolutionError> {
     let mut max: Option<Value> = None;
     let phase_settings: &mut [Value] = &mut [5, 6, 7, 8, 9];
     for perm in Heap::new(phase_settings) {
@@ -76,8 +74,10 @@ pub async fn part_2(parsed_input: &[Value]) -> Result<Value, SolutionError> {
                     // Send the 0 signal to the first amplifier, via the sender of the last one
                     sender.send(0).await?;
                 }
-                Computer::load(parsed_input.to_vec())
-                    .run(&mut receiver, Some(&mut sender)).await?;
+                let mut comp = Computer::load(parsed_input.clone());
+                comp.set_input(Some(&mut receiver));
+                comp.set_output(Some(&mut sender));
+                comp.run().await?;
                 sender.close().await?;
                 Ok(receiver)
             },

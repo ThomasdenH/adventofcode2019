@@ -12,6 +12,5 @@ pub mod day_08;
 pub mod day_09;
 pub mod day_10;
 pub mod day_11;
+pub mod day_12;
 pub mod intcode;
-
-pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + 'static>>;
