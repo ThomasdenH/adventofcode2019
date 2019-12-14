@@ -7,6 +7,7 @@ use thiserror::*;
 use futures::future::try_select;
 use futures::pin_mut;
 use futures::future::Either;
+use std::fmt;
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 enum Direction {
@@ -192,12 +193,31 @@ impl Field {
         self.colors.insert(p, c);
     }
 
-    fn view_color(&mut self, p: Point) -> Color {
+    fn view_color(&self, p: Point) -> Color {
         *self.colors.get(&p).unwrap_or(&Color::Black)
     }
 
     fn unique_tiles_painted(&self) -> usize {
         self.colors.len()
+    }
+}
+
+impl fmt::Display for Field {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let min_x = self.colors.keys().map(|p| p.x).min().unwrap();
+        let min_y = self.colors.keys().map(|p| p.y).min().unwrap();
+        let max_x = self.colors.keys().map(|p| p.x).max().unwrap();
+        let max_y = self.colors.keys().map(|p| p.y).max().unwrap();
+        for y in min_y..=max_y {
+            for x in min_x..=max_x {
+                write!(f, "{}", match self.view_color(Point::new(x, y)) {
+                    Color::Black => " ",
+                    Color::White => "█"
+                })?;
+            }
+            writeln!(f)?;
+        }
+        Ok(())
     }
 }
 
@@ -208,3 +228,11 @@ pub async fn part_1(memory: Memory) -> Result<usize, SolutionError> {
     EmergencyHullPaintingRobot::run(memory, &mut field).await?;
     Ok(field.unique_tiles_painted())
 }
+
+pub async fn part_2(memory: Memory) -> Result<Field, SolutionError> {
+    let mut field = Field::new();
+    field.paint(Point::new(0, 0), Color::White);
+    EmergencyHullPaintingRobot::run(memory, &mut field).await?;
+    Ok(field)
+}
+
