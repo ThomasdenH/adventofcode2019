@@ -1,13 +1,13 @@
-use crate::intcode::{Computer, ComputerError, Value, Memory};
-use futures::channel::mpsc::{Receiver, Sender, channel};
+use crate::intcode::{Computer, ComputerError, Memory, Value};
+use futures::channel::mpsc::{channel, Receiver, Sender};
+use futures::future::try_select;
+use futures::future::Either;
+use futures::pin_mut;
 use futures::prelude::*;
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use thiserror::*;
-use futures::future::try_select;
-use futures::pin_mut;
-use futures::future::Either;
 use std::fmt;
+use thiserror::*;
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 enum Direction {
@@ -20,7 +20,7 @@ enum Direction {
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 enum RelativeDirection {
     TurnLeft,
-    TurnRight
+    TurnRight,
 }
 
 impl TryFrom<Value> for RelativeDirection {
@@ -29,7 +29,7 @@ impl TryFrom<Value> for RelativeDirection {
         match v {
             0 => Ok(Self::TurnLeft),
             1 => Ok(Self::TurnRight),
-            _ => Err(SolutionError::InvalidRotation)
+            _ => Err(SolutionError::InvalidRotation),
         }
     }
 }
@@ -59,7 +59,7 @@ impl Direction {
     fn rotate(&mut self, relative_direction: RelativeDirection) {
         match relative_direction {
             RelativeDirection::TurnLeft => self.rotate_left(),
-            RelativeDirection::TurnRight => self.rotate_right()
+            RelativeDirection::TurnRight => self.rotate_right(),
         }
     }
 
@@ -82,8 +82,7 @@ impl Direction {
     }
 }
 
-struct EmergencyHullPaintingRobot {
-}
+struct EmergencyHullPaintingRobot {}
 
 impl EmergencyHullPaintingRobot {
     async fn run(memory: Memory, field: &mut Field) -> Result<(), SolutionError> {
@@ -91,7 +90,7 @@ impl EmergencyHullPaintingRobot {
         let (mut from_robot_sender, mut from_robot_receiver) = channel(CHANNEL_BUFFER_SIZE);
         let mut computer = Computer::load(memory);
         computer.set_input(Some(&mut to_robot_receiver));
-        computer.set_output(Some(&mut from_robot_sender));  
+        computer.set_output(Some(&mut from_robot_sender));
         let computer_future = computer.run();
         let mut field_runner = FieldRunner::new(field);
         let field_runner_future = field_runner.run(to_robot_sender, from_robot_receiver);
@@ -99,7 +98,7 @@ impl EmergencyHullPaintingRobot {
         match try_select(computer_future, field_runner_future).await {
             Ok(_) => Ok(()),
             Err(Either::Left((computer_err, _))) => Err(SolutionError::from(computer_err)),
-            Err(Either::Right((solution_err, _))) => Err(solution_err)
+            Err(Either::Right((solution_err, _))) => Err(solution_err),
         }?;
         Ok(())
     }
@@ -116,7 +115,7 @@ pub enum SolutionError {
     #[error("invalid rotation")]
     InvalidRotation,
     #[error("io error")]
-    IoError
+    IoError,
 }
 
 struct FieldRunner<'a> {
@@ -140,13 +139,22 @@ impl<'a> FieldRunner<'a> {
         self.position.move_in_direction(self.direction);
     }
 
-    async fn run(&mut self, mut camera: Sender<Value>, mut instructions: Receiver<Value>) -> Result<(), SolutionError> {
+    async fn run(
+        &mut self,
+        mut camera: Sender<Value>,
+        mut instructions: Receiver<Value>,
+    ) -> Result<(), SolutionError> {
         loop {
             let currently_visible = self.field.view_color(self.position);
-            camera.send(currently_visible.into()).await.map_err(|_| SolutionError::IoError)?;
+            camera
+                .send(currently_visible.into())
+                .await
+                .map_err(|_| SolutionError::IoError)?;
 
             let color = Color::try_from(instructions.next().await.ok_or(SolutionError::IoError)?)?;
-            let direction_to_move = RelativeDirection::try_from(instructions.next().await.ok_or(SolutionError::IoError)?)?;
+            let direction_to_move = RelativeDirection::try_from(
+                instructions.next().await.ok_or(SolutionError::IoError)?,
+            )?;
             self.do_move(color, direction_to_move);
         }
     }
@@ -210,10 +218,14 @@ impl fmt::Display for Field {
         let max_y = self.colors.keys().map(|p| p.y).max().unwrap();
         for y in min_y..=max_y {
             for x in min_x..=max_x {
-                write!(f, "{}", match self.view_color(Point::new(x, y)) {
-                    Color::Black => " ",
-                    Color::White => "█"
-                })?;
+                write!(
+                    f,
+                    "{}",
+                    match self.view_color(Point::new(x, y)) {
+                        Color::Black => " ",
+                        Color::White => "█",
+                    }
+                )?;
             }
             writeln!(f)?;
         }
@@ -235,4 +247,3 @@ pub async fn part_2(memory: Memory) -> Result<Field, SolutionError> {
     EmergencyHullPaintingRobot::run(memory, &mut field).await?;
     Ok(field)
 }
-

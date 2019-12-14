@@ -1,4 +1,4 @@
-use crate::intcode::{Computer, ComputerError, Value, Memory, parse_program};
+use crate::intcode::{parse_program, Computer, ComputerError, Memory, Value};
 
 pub fn parse_input(s: &str) -> Result<Memory, ComputerError> {
     parse_program(s)

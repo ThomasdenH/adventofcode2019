@@ -1,8 +1,8 @@
 use adventofcode::day_02::*;
 use anyhow::Result;
+use futures_await_test::*;
 use std::fs::File;
 use std::io::Read;
-use futures_await_test::*;
 
 #[async_test]
 async fn test_part_1() -> Result<()> {

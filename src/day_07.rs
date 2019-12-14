@@ -1,4 +1,4 @@
-use crate::intcode::{Computer, ComputerError, Value, Memory, parse_program};
+use crate::intcode::{parse_program, Computer, ComputerError, Memory, Value};
 use futures::channel::mpsc::{channel, Receiver, SendError, Sender};
 use futures::prelude::*;
 use permutohedron::Heap;
@@ -22,8 +22,7 @@ async fn output(memory: Memory, mut input: &[Value]) -> Result<Value, ComputerEr
     let mut comp = Computer::load(memory);
     comp.set_input(Some(&mut input));
     comp.set_output(Some(&mut output_a));
-        comp.run()
-        .await?;
+    comp.run().await?;
     Ok(output_a.unwrap())
 }
 

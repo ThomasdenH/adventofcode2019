@@ -9,10 +9,15 @@ pub use io::*;
 pub type Value = isize;
 
 pub fn parse_program(s: &str) -> Result<Memory, ComputerError> {
-    Ok(Memory::from(s.trim()
-        .split(',')
-        .map(|s| s.parse::<Value>().map_err(|_| ComputerError::ParseProgramError))
-        .collect::<Result<Vec<_>, ComputerError>>()?))
+    Ok(Memory::from(
+        s.trim()
+            .split(',')
+            .map(|s| {
+                s.parse::<Value>()
+                    .map_err(|_| ComputerError::ParseProgramError)
+            })
+            .collect::<Result<Vec<_>, ComputerError>>()?,
+    ))
 }
 
 #[derive(Clone, Debug)]
@@ -118,7 +123,7 @@ pub enum ComputerError {
     #[error("could not parse the program")]
     ParseProgramError,
     #[error("jumped to invalid location")]
-    InvalidJump
+    InvalidJump,
 }
 
 impl TryFrom<Value> for OpCode {
@@ -182,7 +187,7 @@ pub struct Computer<'a> {
     instruction_pointer: usize,
     relative_base: Value,
     read: Option<&'a mut (dyn Read + 'a)>,
-    write: Option<&'a mut (dyn Write + 'a)>
+    write: Option<&'a mut (dyn Write + 'a)>,
 }
 
 impl<'a> Computer<'a> {
@@ -192,7 +197,7 @@ impl<'a> Computer<'a> {
             instruction_pointer: 0,
             relative_base: 0,
             read: None,
-            write: None
+            write: None,
         }
     }
 
@@ -245,7 +250,9 @@ impl<'a> Computer<'a> {
                 }
                 OpCode::Input => {
                     let to_at = parameters.next()?;
-                    let value = self.read.as_mut()
+                    let value = self
+                        .read
+                        .as_mut()
                         .ok_or(ComputerError::ReadInputError)?
                         .read()
                         .await
@@ -266,7 +273,8 @@ impl<'a> Computer<'a> {
                     let a = self.get_parameter(a_at)?;
                     let b = self.get_parameter(b_at)?;
                     if a != 0 {
-                        self.instruction_pointer = usize::try_from(b).map_err(|_| ComputerError::InvalidJump)?;
+                        self.instruction_pointer =
+                            usize::try_from(b).map_err(|_| ComputerError::InvalidJump)?;
                     }
                 }
                 OpCode::JumpIfFalse => {
@@ -275,7 +283,8 @@ impl<'a> Computer<'a> {
                     let a = self.get_parameter(a_at)?;
                     let b = self.get_parameter(b_at)?;
                     if a == 0 {
-                        self.instruction_pointer = usize::try_from(b).map_err(|_| ComputerError::InvalidJump)?;
+                        self.instruction_pointer =
+                            usize::try_from(b).map_err(|_| ComputerError::InvalidJump)?;
                     }
                 }
                 OpCode::LessThan => {

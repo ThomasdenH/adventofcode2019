@@ -1,6 +1,6 @@
-use crate::intcode::{Computer, ComputerError, Value, Memory, parse_program};
-use futures_await_test::*;
+use crate::intcode::{parse_program, Computer, ComputerError, Memory, Value};
 use anyhow::Result;
+use futures_await_test::*;
 
 pub fn parse_input(s: &str) -> Result<Memory, ComputerError> {
     parse_program(s)
@@ -49,6 +49,6 @@ async fn test_day_2_examples() -> Result<()> {
     let mut comp = Computer::load(program);
     comp.run().await?;
     assert_eq!(comp.base_memory(), &[30, 1, 1, 4, 2, 5, 6, 0, 99]);
-    
+
     Ok(())
 }
