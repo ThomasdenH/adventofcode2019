@@ -1,11 +1,11 @@
 use scan_fmt::*;
+use std::collections::HashSet;
 use std::fmt;
 use std::iter;
 use std::iter::Sum;
 use std::ops::AddAssign;
 use std::ops::{Add, Sub};
 use thiserror::*;
-use std::collections::HashSet;
 
 #[derive(Clone, Copy, Default, Eq, PartialEq)]
 pub struct Vector {
@@ -368,15 +368,19 @@ fn test_example_one() {
         .unwrap()
     );
 
-    assert_eq!(parse_state(
-        "pos=<x= 2, y= 1, z=-3>, vel=<x=-3, y=-2, z= 1>
+    assert_eq!(
+        parse_state(
+            "pos=<x= 2, y= 1, z=-3>, vel=<x=-3, y=-2, z= 1>
         pos=<x= 1, y=-8, z= 0>, vel=<x=-1, y= 1, z= 3>
         pos=<x= 3, y=-6, z= 1>, vel=<x= 3, y= 2, z=-3>
         pos=<x= 2, y= 0, z= 4>, vel=<x= 1, y=-1, z=-1>"
-    )
-    .unwrap()
-    .iter()
-    .map(|moon| moon.total_energy()).sum::<u64>(), 179);
+        )
+        .unwrap()
+        .iter()
+        .map(|moon| moon.total_energy())
+        .sum::<u64>(),
+        179
+    );
 
     let energy_after_10_steps: u64 = simulate(&moons)
         .nth(10)

@@ -23,4 +23,3 @@ async fn test_part_2() -> Result<()> {
     assert_eq!(part_2(parse_input(&s)?).await?, 18647);
     Ok(())
 }
-

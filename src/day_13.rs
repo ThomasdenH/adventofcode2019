@@ -1,25 +1,24 @@
-use futures::future::try_select;
-use std::convert::{TryFrom, TryInto};
-use crate::intcode::{Value, Computer, Memory, ComputerError, io};
-use thiserror::*;
-use futures::prelude::*;
-use futures::channel::mpsc::{channel, Receiver, Sender};
-use futures::select;
-use std::collections::HashMap;
-use futures::stream::Stream;
-use std::pin::Pin;
-use futures::task::{Context, Poll};
-use std::sync::{Arc, Mutex};
+use crate::intcode::{io, Computer, ComputerError, Memory, Value};
 use async_trait::async_trait;
+use futures::channel::mpsc::{channel, Receiver, Sender};
+use futures::future::try_select;
 use futures::pin_mut;
+use futures::prelude::*;
+use futures::select;
+use futures::stream::Stream;
+use futures::task::{Context, Poll};
+use std::collections::HashMap;
+use std::convert::{TryFrom, TryInto};
 use std::fmt;
+use std::pin::Pin;
+use std::sync::{Arc, Mutex};
+use thiserror::*;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 struct ScreenPosition {
     x: usize,
-    y: usize
+    y: usize,
 }
-
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 enum TileId {
@@ -27,7 +26,7 @@ enum TileId {
     Wall,
     Block,
     HorizontalPaddle,
-    Ball
+    Ball,
 }
 
 impl TryFrom<(Value, Value)> for ScreenPosition {
@@ -35,7 +34,7 @@ impl TryFrom<(Value, Value)> for ScreenPosition {
     fn try_from((x, y): (Value, Value)) -> Result<Self, Self::Error> {
         Ok(ScreenPosition {
             x: usize::try_from(x).map_err(|_| SolutionError::InvalidScreenPosition)?,
-            y: usize::try_from(y).map_err(|_| SolutionError::InvalidScreenPosition)?
+            y: usize::try_from(y).map_err(|_| SolutionError::InvalidScreenPosition)?,
         })
     }
 }
@@ -51,7 +50,7 @@ pub enum SolutionError {
     #[error("a protocol error occurred")]
     ProtocolError,
     #[error("could not find the tile id")]
-    CouldNotFindTileId
+    CouldNotFindTileId,
 }
 
 impl TryFrom<Value> for TileId {
@@ -63,7 +62,7 @@ impl TryFrom<Value> for TileId {
             2 => Ok(TileId::Block),
             3 => Ok(TileId::HorizontalPaddle),
             4 => Ok(TileId::Ball),
-            _ => Err(SolutionError::UnknownTileId)
+            _ => Err(SolutionError::UnknownTileId),
         }
     }
 }
@@ -72,7 +71,7 @@ pub use crate::intcode::parse_program as parse_input;
 
 #[derive(Default, Clone)]
 struct Screen {
-    tiles: HashMap<ScreenPosition, TileId>
+    tiles: HashMap<ScreenPosition, TileId>,
 }
 
 impl fmt::Debug for Screen {
@@ -81,14 +80,21 @@ impl fmt::Debug for Screen {
         let max_y = self.tiles.keys().map(|sp| sp.y).max().unwrap();
         for y in 0..=max_y {
             for x in 0..=max_x {
-                write!(f, "{}", match self.tiles.get(&&ScreenPosition::try_from((x as Value, y as Value)).unwrap()) {
-                    Some(TileId::Ball) => 'B',
-                    Some(TileId::Block) => 'X',
-                    Some(TileId::Empty) => ' ',
-                    Some(TileId::HorizontalPaddle) => '_',
-                    Some(TileId::Wall) => 'W',
-                    _ => ' '
-                })?;
+                write!(
+                    f,
+                    "{}",
+                    match self
+                        .tiles
+                        .get(&&ScreenPosition::try_from((x as Value, y as Value)).unwrap())
+                    {
+                        Some(TileId::Ball) => 'B',
+                        Some(TileId::Block) => 'X',
+                        Some(TileId::Empty) => ' ',
+                        Some(TileId::HorizontalPaddle) => '_',
+                        Some(TileId::Wall) => 'W',
+                        _ => ' ',
+                    }
+                )?;
             }
             writeln!(f)?;
         }
@@ -101,18 +107,26 @@ impl Screen {
         self.tiles.insert(pos, tile_id);
     }
 
-    async fn read_instructions(&mut self, mut receiver: Receiver<Value>) -> Result<(), SolutionError> {
+    async fn read_instructions(
+        &mut self,
+        mut receiver: Receiver<Value>,
+    ) -> Result<(), SolutionError> {
         loop {
             let x = receiver.next().await.ok_or(SolutionError::ProtocolError)?;
             let y = receiver.next().await.ok_or(SolutionError::ProtocolError)?;
             let position = ScreenPosition::try_from((x, y))?;
-            let tile_id: TileId = receiver.next().await.ok_or(SolutionError::ProtocolError)?.try_into()?;
+            let tile_id: TileId = receiver
+                .next()
+                .await
+                .ok_or(SolutionError::ProtocolError)?
+                .try_into()?;
             self.set_at(position, tile_id)
         }
     }
-    
+
     fn block_tile_count(&self) -> usize {
-        self.tiles.values()
+        self.tiles
+            .values()
             .filter(|val| **val == TileId::Block)
             .count()
     }
@@ -126,7 +140,9 @@ impl Screen {
     }
 
     fn find_tile_id(&self, tile_id: TileId) -> Result<ScreenPosition, SolutionError> {
-        Ok(*self.tiles.iter()
+        Ok(*self
+            .tiles
+            .iter()
             .find(|(_key, value)| **value == tile_id)
             .ok_or(SolutionError::CouldNotFindTileId)?
             .0)
@@ -140,7 +156,7 @@ struct GameState {
     screen: Screen,
     score: u64,
     input: [Value; 3],
-    input_index: usize
+    input_index: usize,
 }
 
 impl GameState {
@@ -148,14 +164,14 @@ impl GameState {
         let [x, y, z] = self.input;
         if x == -1 && y == 0 {
             self.score = z.try_into().map_err(|_| SolutionError::ProtocolError)?;
-        } else {                
+        } else {
             let position = ScreenPosition::try_from((x, y))?;
             let tile_id: TileId = z.try_into()?;
             self.screen.set_at(position, tile_id);
         }
         Ok(())
     }
-    
+
     fn score(&self) -> u64 {
         self.score
     }
@@ -164,7 +180,7 @@ impl GameState {
 enum JoystickPosition {
     Neutral,
     Left,
-    Right
+    Right,
 }
 
 impl From<JoystickPosition> for Value {
@@ -172,7 +188,7 @@ impl From<JoystickPosition> for Value {
         match pos {
             JoystickPosition::Neutral => 0,
             JoystickPosition::Left => -1,
-            JoystickPosition::Right => 1
+            JoystickPosition::Right => 1,
         }
     }
 }
@@ -183,13 +199,16 @@ impl io::Read for Arc<Mutex<GameState>> {
         let screen = &self.lock().unwrap().screen;
         let paddle_pos = screen.paddle_position().unwrap().x;
         let ball_pos = screen.ball_position().unwrap().x;
-        Some(if paddle_pos < ball_pos {
-            JoystickPosition::Right
-        } else if paddle_pos > ball_pos {
-            JoystickPosition::Left
-        } else {
-            JoystickPosition::Neutral
-        }.into())
+        Some(
+            if paddle_pos < ball_pos {
+                JoystickPosition::Right
+            } else if paddle_pos > ball_pos {
+                JoystickPosition::Left
+            } else {
+                JoystickPosition::Neutral
+            }
+            .into(),
+        )
     }
 }
 
