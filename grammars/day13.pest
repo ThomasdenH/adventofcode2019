@@ -1,0 +1,8 @@
+WHITESPACE = { " " }
+alpha = { 'A'..'Z' }
+word = { alpha+ }
+number = { ASCII_DIGIT+ }
+ingredient = { number ~ word }
+comma = _{ "+" }
+arrow = _{ "=>" }
+reaction = { SOI ~ {ingredient ~ comma}* ~ ingredient ~ arrow ~ ingredient ~ EOI }

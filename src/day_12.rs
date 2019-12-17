@@ -115,8 +115,7 @@ impl Moon {
     }
 
     fn total_energy(self) -> u64 {
-        dbg!((self.pos, self.vel));
-        dbg!(self.potential_energy()) * dbg!(self.kinetic_energy())
+        self.potential_energy() * self.kinetic_energy()
     }
 }
 
@@ -377,13 +376,13 @@ fn test_example_one() {
     )
     .unwrap()
     .iter()
-    .map(|moon| dbg!(moon.total_energy())).sum::<u64>(), 179);
+    .map(|moon| moon.total_energy()).sum::<u64>(), 179);
 
     let energy_after_10_steps: u64 = simulate(&moons)
         .nth(10)
         .unwrap()
         .iter()
-        .map(|moon| dbg!(moon.total_energy()))
+        .map(|moon| moon.total_energy())
         .sum();
     assert_eq!(energy_after_10_steps, 179u64);
 }
