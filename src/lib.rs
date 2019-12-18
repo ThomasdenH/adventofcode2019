@@ -1,5 +1,6 @@
 #![feature(proc_macro_hygiene, stmt_expr_attributes)]
 #![feature(async_closure)]
+#![feature(vec_remove_item)]
 
 pub mod day_01;
 pub mod day_02;
