@@ -165,7 +165,7 @@ pub fn parse_input(input: &str) -> Result<Vec<Moon>, SolutionError> {
         .collect())
 }
 
-pub fn simulate<'a>(moons: &'a [Moon]) -> impl Iterator<Item = Vec<Moon>> {
+pub fn simulate(moons: &[Moon]) -> impl Iterator<Item = Vec<Moon>> {
     iter::successors(Some(moons.to_vec()), |moons| {
         let forces = moons
             .iter()

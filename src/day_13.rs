@@ -1,16 +1,12 @@
 use crate::intcode::{io, Computer, ComputerError, Memory, Value};
 use async_trait::async_trait;
-use futures::channel::mpsc::{channel, Receiver, Sender};
-use futures::future::try_select;
-use futures::pin_mut;
+use futures::channel::mpsc::{channel, Receiver};
 use futures::prelude::*;
 use futures::select;
-use futures::stream::Stream;
-use futures::task::{Context, Poll};
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
-use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use thiserror::*;
 
@@ -200,12 +196,10 @@ impl io::Read for Arc<Mutex<GameState>> {
         let paddle_pos = screen.paddle_position().unwrap().x;
         let ball_pos = screen.ball_position().unwrap().x;
         Some(
-            if paddle_pos < ball_pos {
-                JoystickPosition::Right
-            } else if paddle_pos > ball_pos {
-                JoystickPosition::Left
-            } else {
-                JoystickPosition::Neutral
+            match paddle_pos.cmp(&ball_pos) {
+                Ordering::Less => JoystickPosition::Right,
+                Ordering::Greater => JoystickPosition::Left,
+                Ordering::Equal => JoystickPosition::Neutral,
             }
             .into(),
         )
@@ -228,7 +222,7 @@ impl io::Write for Arc<Mutex<GameState>> {
 
 pub async fn part_1(memory: Memory) -> Result<usize, SolutionError> {
     let mut computer = Computer::load(memory);
-    let (mut output_sender, mut output_receiver) = channel(CHANNEL_BUFFER_SIZE);
+    let (mut output_sender, output_receiver) = channel(CHANNEL_BUFFER_SIZE);
     computer.set_output(Some(&mut output_sender));
 
     let mut screen = Screen::default();

@@ -45,7 +45,7 @@ impl SpaceImageFormat {
 
 impl<'a> SpaceImageFormatLayer<'a> {
     fn count_digits(&self, d: u8) -> usize {
-        self.data.iter().filter(|e| **e == d).count()
+        bytecount::count(self.data, d)
     }
 
     fn color_at(&self, x: usize, y: usize) -> u8 {

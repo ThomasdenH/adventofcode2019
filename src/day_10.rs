@@ -230,7 +230,7 @@ pub fn part_2(field: &AstroidField) -> usize {
         let vector = location.vector_to(asteroid);
         grouped
             .entry(vector.pseudo_angle())
-            .or_insert_with(|| Vec::new())
+            .or_insert_with(Vec::new)
             .push((vector, asteroid));
     }
     let mut sorted: Vec<(Rational, Vec<(Vector, Point)>)> = grouped.into_iter().collect();
