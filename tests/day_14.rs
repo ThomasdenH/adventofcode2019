@@ -1,6 +1,5 @@
 pub use adventofcode::day_14::{parse_input, part_1, part_2};
 use anyhow::Result;
-use futures_await_test::*;
 
 #[test]
 fn test_part_1() -> Result<()> {
