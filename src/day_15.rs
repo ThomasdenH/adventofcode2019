@@ -20,7 +20,7 @@ pub enum SolutionError {
     #[error("could not send data")]
     SendError(#[from] SendError),
     #[error("unknown character: {0}")]
-    UnknownCharacter(char)
+    UnknownCharacter(char),
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
@@ -211,17 +211,26 @@ impl TryFrom<&str> for Map {
         let mut tiles = HashMap::new();
         for (y, line) in s.lines().enumerate() {
             for (x, c) in line.chars().enumerate() {
-                let p = Point { x: x as i64, y: y as i64 };
+                let p = Point {
+                    x: x as i64,
+                    y: y as i64,
+                };
                 match c {
-                    '#' => {tiles.insert(p, Tile::Wall);},
-                    '.' => {tiles.insert(p, Tile::Empty);},
-                    'O' => {tiles.insert(p, Tile::OxygenSystem);},
+                    '#' => {
+                        tiles.insert(p, Tile::Wall);
+                    }
+                    '.' => {
+                        tiles.insert(p, Tile::Empty);
+                    }
+                    'O' => {
+                        tiles.insert(p, Tile::OxygenSystem);
+                    }
                     ' ' => continue,
-                    c => return Err(SolutionError::UnknownCharacter(c))
+                    c => return Err(SolutionError::UnknownCharacter(c)),
                 }
             }
         }
-        Ok(Map{ tiles})
+        Ok(Map { tiles })
     }
 }
 
@@ -229,7 +238,7 @@ impl Map {
     async fn do_move<Input, Output>(
         output: &mut Output,
         input: &mut Input,
-        cmd: MovementCommand
+        cmd: MovementCommand,
     ) -> Result<Status, SolutionError>
     where
         Input: TryStream<Ok = Status, Error = SolutionError> + Unpin,
@@ -241,8 +250,7 @@ impl Map {
     }
 
     fn position_of_oxygen(&self) -> Result<Point, SolutionError> {
-        self
-            .tiles
+        self.tiles
             .iter()
             .find(|(_key, value)| **value == Tile::OxygenSystem)
             .ok_or(SolutionError::CouldNotFindSystem)
@@ -317,7 +325,9 @@ impl Map {
         to_visit.push_back((self.position_of_oxygen()?, 0u32));
         let mut highest = 0;
         while let Some((point, mut counter)) = to_visit.pop_front() {
-            debug_assert!([Tile::OxygenSystem, Tile::Empty].contains(self.tiles.get(&point).unwrap()));
+            debug_assert!(
+                [Tile::OxygenSystem, Tile::Empty].contains(self.tiles.get(&point).unwrap())
+            );
             // Visit
             visited.insert(point);
             // Increase counter
@@ -389,11 +399,12 @@ pub async fn part_2(input: Memory) -> Result<u32, SolutionError> {
 #[test]
 fn test_flood_fill() -> anyhow::Result<()> {
     let map = Map::try_from(
-" ##   
+        " ##   
 #..## 
 #.#..#
 #.O.# 
- ###  ")?;
- assert_eq!(map.flood_fill()?, 4);
- Ok(())
+ ###  ",
+    )?;
+    assert_eq!(map.flood_fill()?, 4);
+    Ok(())
 }
